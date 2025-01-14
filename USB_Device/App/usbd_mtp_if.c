@@ -127,7 +127,7 @@ uint32_t newID = 0;
   object[newID].Storage_id=newID+1;
   object[newID].ObjectFormat=0;
   object[newID].ProtectionStatus=0;
-  object[newID].ObjectCompressedSize=FILE_CONTENT_LEN;
+  object[newID].ObjectCompressedSize=FILE_CONTENT_LEN;//file size
   object[newID].ThumbFormat=0;
   object[newID].ThumbCompressedSize=0;
   object[newID].ThumbPixWidth=0;
@@ -139,14 +139,14 @@ uint32_t newID = 0;
   object[newID].AssociationType=0xC000;//MTP type file or folder?
   object[newID].AssociationDesc=0;
   object[newID].SequenceNumber=0;
-  object[newID].Filename_len=FILE_NAME_LEN;
+  object[newID].Filename_len=FILE_NAME_LEN;//file name
   object[newID].CaptureDate=0;
   object[newID].ModificationDate=0;
   object[newID].Keywords=0;
   emptySpace = emptySpace-MAX_SIZE; //decrease max size
   bufferLen[newID]=FILE_CONTENT_LEN;
-  memcpy(buffer[newID],fileContent,FILE_CONTENT_LEN);
-  memcpy(object[newID].Filename,fileName,FILE_NAME_LEN*2);
+  memcpy(buffer[newID],fileContent,FILE_CONTENT_LEN);//store file content to array
+  memcpy(object[newID].Filename,fileName,FILE_NAME_LEN*2);//file name in Unicode16
   return 0;
 }
 
@@ -343,7 +343,7 @@ static void USBD_MTP_Itf_WriteData(uint16_t len, uint8_t *buff)
 
   return;
 }
-
+  #define HEADER_SHIFT 12
 /**
   * @brief  USBD_MTP_Itf_GetContainerLength
   *         Get length of generic container
@@ -354,7 +354,7 @@ static uint32_t USBD_MTP_Itf_GetContainerLength(uint32_t Param1)
 {
   uint32_t length = 0U;
   if((Param1< MAX_OBJECTS+1)&& (Param1!=0)){ 
-    length = bufferLen[Param1-1];
+    length = object[Param1-1].ObjectCompressedSize+HEADER_SHIFT;
   }
 
 
@@ -402,7 +402,6 @@ static uint16_t USBD_MTP_Itf_DeleteObject(uint32_t Param1)
 static uint32_t USBD_MTP_Itf_ReadData(uint32_t Param1, uint8_t *buff, MTP_DataLengthTypeDef *data_length)
 {
   UNUSED(Param1);
-  #define HEADER_SHIFT 12
   #define READ_MAX_SIZE (64 - HEADER_SHIFT)
   uint32_t temp_length = data_length->temp_length;
   uint32_t totallen = object[Param1-1].ObjectCompressedSize;;
@@ -416,7 +415,6 @@ static uint32_t USBD_MTP_Itf_ReadData(uint32_t Param1, uint8_t *buff, MTP_DataLe
     }
     //check if we need to keep space for header => temp_length=0 means this is first message with header 
     if(temp_length==0){
-
       memcpy(buff+HEADER_SHIFT,(uint8_t*)(buffer[Param1-1]+temp_length),copyLength);
     }else{
       memcpy(buff,(uint8_t*)(buffer[Param1-1]+temp_length),copyLength);
